@@ -117,26 +117,6 @@ spec:
             - name: actuator-port
               containerPort: 5679
 
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: 5679
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 5
-
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: 5679
-            initialDelaySeconds: 90
-            periodSeconds: 30
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 5
-
           resources:
             limits:
               cpu: "1"
