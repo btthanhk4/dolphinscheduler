@@ -1,0 +1,143 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    AWS-S3-ACCESS-KEY-ID: minioadmin
+    AWS-S3-ACCESS-KEY-SECRET: minioadmin
+    AWS_S3_BUCKET_NAME: dolphinscheduler
+    AWS_S3_ENDPOINT: http://192.168.45.207:9000
+    AWS_S3_PATH_STYLE_ACCESS: "true"
+    DATA_BASEDIR_PATH: /tmp/dolphinscheduler
+    DATAX_LAUNCHER: /opt/soft/datax/bin/datax.py
+    DOLPHINSCHEDULER_OPTS: ""
+    FLINK_HOME: /opt/soft/flink
+    HADOOP_CONF_DIR: /opt/soft/hadoop/etc/hadoop
+    HADOOP_HOME: /opt/soft/hadoop
+    HIVE_HOME: /opt/soft/hive
+    JAVA_HOME: /opt/java/openjdk
+    PYTHON_LAUNCHER: /usr/bin/python/bin/python3
+    RESOURCE_STORAGE_TYPE: S3
+    RESOURCE_STORAGE_UPLOAD_BASE_PATH: /
+    SPARK_HOME: /opt/soft/spark
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+    creationTimestamp: "2025-12-18T08:23:03Z"
+    labels:
+      app.kubernetes.io/instance: cluster
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: cluster-common
+    name: cluster-common
+    namespace: bnctl-dolphinscheduler-uat-ns
+    resourceVersion: "40390106"
+    uid: 7d106037-1f60-4b4d-b1cb-916e52033efd
+- apiVersion: v1
+  data:
+    aws.credentials.provider.type: AWSStaticCredentialsProvider
+    aws.s3.access.key.id: minioadmin
+    aws.s3.access.key.secret: minio-secret-key-uat
+    aws.s3.bucket.name: dolphinscheduler
+    aws.s3.endpoint: http://192.168.45.207:9000
+    aws.s3.region: us-east-1
+    common.properties: |
+      resource.storage.type=S3
+
+
+      # DS internal
+      resource.storage.upload.base.path=/dolphinscheduler
+      data.basedir.path=/tmp/dolphinscheduler
+      datasource.encryption.enable=false
+      datasource.encryption.salt=!@#$%^&*
+      sudo.enable=true
+      resource.storage.local.base.path=/opt/dolphinscheduler/resources
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","data":{"aws.credentials.provider.type":"AWSStaticCredentialsProvider","aws.s3.access.key.id":"minioadmin","aws.s3.access.key.secret":"minio-secret-key-uat","aws.s3.bucket.name":"dolphinscheduler","aws.s3.endpoint":"http://192.168.45.207:9000","aws.s3.region":"us-east-1","common.properties":"resource.storage.type=S3\n\n\n# DS internal\nresource.storage.upload.base.path=/dolphinscheduler\ndata.basedir.path=/tmp/dolphinscheduler\ndatasource.encryption.enable=false\ndatasource.encryption.salt=!@#$%^\u0026*\nsudo.enable=true\nresource.storage.local.base.path=/opt/dolphinscheduler/resources\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"cluster-configs","namespace":"bnctl-dolphinscheduler-uat-ns"}}
+    creationTimestamp: "2025-12-18T08:23:03Z"
+    name: cluster-configs
+    namespace: bnctl-dolphinscheduler-uat-ns
+    resourceVersion: "40390123"
+    uid: 69828276-3225-4259-ac9a-b6686db8e975
+- apiVersion: v1
+  data:
+    init-certs.sh: '#!/bin/bash'
+    setup.sh: |-
+      #!/bin/bash
+
+      # Execute entrypoint as usual after obtaining ZOO_SERVER_ID
+      # check ZOO_SERVER_ID in persistent volume via myid
+      # if not present, set based on POD hostname
+      if [[ -f "/bitnami/zookeeper/data/myid" ]]; then
+          export ZOO_SERVER_ID="$(cat /bitnami/zookeeper/data/myid)"
+      else
+          HOSTNAME="$(hostname -s)"
+          if [[ $HOSTNAME =~ (.*)-([0-9]+)$ ]]; then
+              ORD=${BASH_REMATCH[2]}
+              export ZOO_SERVER_ID="$((ORD + 1 ))"
+          else
+              echo "Failed to get index from hostname $HOSTNAME"
+              exit 1
+          fi
+      fi
+      exec /entrypoint.sh /run.sh
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+    creationTimestamp: "2025-12-18T08:23:03Z"
+    labels:
+      app.kubernetes.io/component: zookeeper
+      app.kubernetes.io/instance: cluster
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: zookeeper
+      helm.sh/chart: zookeeper-11.4.11
+    name: cluster-zookeeper-scripts
+    namespace: bnctl-dolphinscheduler-uat-ns
+    resourceVersion: "40364249"
+    uid: aa24132e-1b27-41b6-b75a-fdaf530e9e07
+- apiVersion: v1
+  data:
+    application.yaml: "spring:\r\n  datasource:\r\n    driver-class-name: org.postgresql.Driver\r\n
+      \   url: jdbc:postgresql://cluster-postgresql-primary.bnctl-postgres-uat-ns.svc.cluster.local:5432/dolphin_db\r\n
+      \   username: dolphin_user\r\n    password: \"Jits#2025\"\r\n"
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","data":{"application.yaml":"spring:\r\n  datasource:\r\n    driver-class-name: org.postgresql.Driver\r\n    url: jdbc:postgresql://cluster-postgresql-primary.bnctl-postgres-uat-ns.svc.cluster.local:5432/dolphin_db\r\n    username: dolphin_user\r\n    password: \"Jits#2025\"\r\n"},"kind":"ConfigMap","metadata":{"annotations":{},"creationTimestamp":"2025-12-09T09:19:52Z","name":"ds-config-worker","namespace":"bnctl-dolphinscheduler-uat-ns","resourceVersion":"37103422","uid":"d1a1150d-7351-4073-aa5f-ed7ddb8ec431"}}
+    creationTimestamp: "2025-12-18T08:23:03Z"
+    name: ds-config-worker
+    namespace: bnctl-dolphinscheduler-uat-ns
+    resourceVersion: "40364256"
+    uid: b94a0d26-4c1a-4486-bd4e-56845761ac3c
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIBeTCCAR+gAwIBAgIBADAKBggqhkjOPQQDAjAkMSIwIAYDVQQDDBlya2UyLXNl
+      cnZlci1jYUAxNzU5MjkxNDg2MB4XDTI1MTAwMTA0MDQ0NloXDTM1MDkyOTA0MDQ0
+      NlowJDEiMCAGA1UEAwwZcmtlMi1zZXJ2ZXItY2FAMTc1OTI5MTQ4NjBZMBMGByqG
+      SM49AgEGCCqGSM49AwEHA0IABKcL0Hp8lOjWcGVdusCIgJaWX2LK5FmaZZBIqlLE
+      zTThByq9fkf9gf4CBQpoidc1XsxgEhw1rK4w2XschCBuDh6jQjBAMA4GA1UdDwEB
+      /wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBTH6bdzQ6kn/S7Gd2II
+      4nWmp/3RaDAKBggqhkjOPQQDAgNIADBFAiA7Kn2q5zNnXwGbIrMfurJtVGf4Pi8W
+      XLBMWh3WLfy02AIhALWZNH9K9Yhra9uxwQAhlSYha7dY1zoLBanMcH3Co+Ip
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2025-12-18T08:22:41Z"
+    name: kube-root-ca.crt
+    namespace: bnctl-dolphinscheduler-uat-ns
+    resourceVersion: "40363913"
+    uid: 76d3c1fb-2d50-48a5-959c-257b3a693c3f
+kind: List
+metadata:
+  resourceVersion: ""

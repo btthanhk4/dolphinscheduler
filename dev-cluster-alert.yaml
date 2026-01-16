@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-alert
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: alert
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-alert
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: alert
+      app.kubernetes.io/instance: cluster
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: cluster-alert
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: alert
+        app.kubernetes.io/instance: cluster
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cluster-alert
+    spec:
+      serviceAccountName: cluster
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: cluster-alert
+          image: apache/dolphinscheduler-alert-server:latest
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: TZ
+              value: Asia/Ho_Chi_Minh
+            - name: SPRING_JACKSON_TIME_ZONE
+              value: Asia/Ho_Chi_Minh
+            - name: DATABASE
+              value: postgresql
+
+            # ===== DATABASE (UAT) =====
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://cluster-postgresql-primary.bnctl-postgres-uat-ns.svc.cluster.local:5432/dolphin_db?characterEncoding=utf8
+            - name: SPRING_DATASOURCE_USERNAME
+              value: dolphin_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-externaldb
+                  key: database-password
+            - name: SPRING_DATASOURCE_DRIVER-CLASS-NAME
+              value: org.postgresql.Driver
+
+            # ===== REGISTRY =====
+            - name: REGISTRY_TYPE
+              value: zookeeper
+            - name: REGISTRY_ZOOKEEPER_CONNECT_STRING
+              value: cluster-zookeeper:2181
+
+            # ===== JVM (GIỮ THEO DEV) =====
+            - name: JAVA_OPTS
+              value: -Xms512m -Xmx512m -Xmn256m
+
+          envFrom:
+            - configMapRef:
+                name: cluster-common
+
+          ports:
+            - name: alert-port
+              containerPort: 50052
+            - name: actuator-port
+              containerPort: 50053
+
+          livenessProbe:
+            exec:
+              command: ["curl","-s","http://localhost:50053/actuator/health/liveness"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command: ["curl","-s","http://localhost:50053/actuator/health/readiness"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 512m
+              memory: 1Gi
+
+          volumeMounts:
+            - name: cluster-alert
+              mountPath: /opt/dolphinscheduler/logs
+            - name: config-volume
+              mountPath: /opt/dolphinscheduler/conf/common.properties
+              subPath: common.properties
+
+      volumes:
+        - name: cluster-alert
+          persistentVolumeClaim:
+            claimName: cluster-alert
+        - name: config-volume
+          configMap:
+            name: cluster-configs

@@ -1,0 +1,180 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cluster-worker
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-worker
+spec:
+  serviceName: cluster-worker-headless
+  replicas: 2
+  podManagementPolicy: Parallel
+  revisionHistoryLimit: 10
+
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+      app.kubernetes.io/instance: cluster
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: cluster-worker
+
+  updateStrategy:
+    type: RollingUpdate
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/instance: cluster
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cluster-worker
+    spec:
+      serviceAccountName: cluster
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+
+      containers:
+      - name: cluster-worker
+        image: btthanhk4/dolphin-worker-custom:v2
+        imagePullPolicy: IfNotPresent
+
+        env:
+        - name: JAVA_OPTS
+          value: -Xms3g -Xmx4g -XX:+UseG1GC -XX:MaxMetaspaceSize=512m
+        - name: SPARK_HOME
+          value: /opt/spark
+        - name: PATH
+          value: /opt/spark/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        - name: TZ
+          value: Asia/Ho_Chi_Minh
+        - name: SPRING_JACKSON_TIME_ZONE
+          value: Asia/Ho_Chi_Minh
+        - name: DATABASE
+          value: postgresql
+
+        # ===== DATABASE (UAT) – CHỈ ĐỔI PHẦN NÀY =====
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:postgresql://cluster-postgresql-primary.bnctl-postgres-uat-ns.svc.cluster.local:5432/dolphin_db?characterEncoding=utf8
+        - name: SPRING_DATASOURCE_USERNAME
+          value: dolphin_user
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cluster-externaldb
+              key: database-password
+        - name: SPRING_DATASOURCE_DRIVER-CLASS-NAME
+          value: org.postgresql.Driver
+
+        # ===== REGISTRY =====
+        - name: REGISTRY_TYPE
+          value: zookeeper
+        - name: REGISTRY_ZOOKEEPER_CONNECT_STRING
+          value: cluster-zookeeper:2181
+
+        # ===== WORKER CONFIG (UAT) =====
+        - name: WORKER_EXEC_THREADS
+          value: "100"
+        - name: WORKER_HOST_WEIGHT
+          value: "100"
+        - name: WORKER_MAX_HEARTBEAT_INTERVAL
+          value: 10s
+        - name: WORKER_SERVER_LOAD_PROTECTION_ENABLED
+          value: "false"
+        - name: WORKER_SERVER_LOAD_PROTECTION_MAX_DISK_USAGE_PERCENTAGE_THRESHOLDS
+          value: "0.7"
+        - name: WORKER_SERVER_LOAD_PROTECTION_MAX_JVM_CPU_USAGE_PERCENTAGE_THRESHOLDS
+          value: "0.7"
+        - name: WORKER_SERVER_LOAD_PROTECTION_MAX_SYSTEM_CPU_USAGE_PERCENTAGE_THRESHOLDS
+          value: "0.7"
+        - name: WORKER_SERVER_LOAD_PROTECTION_MAX_SYSTEM_MEMORY_USAGE_PERCENTAGE_THRESHOLDS
+          value: "0.7"
+        - name: WORKER_TENANT_CONFIG_AUTO_CREATE_TENANT_ENABLED
+          value: "true"
+        - name: WORKER_TENANT_CONFIG_DEFAULT_TENANT_ENABLED
+          value: "false"
+
+        envFrom:
+        - configMapRef:
+            name: cluster-common
+
+        ports:
+        - name: worker-port
+          containerPort: 1234
+        - name: actuator-port
+          containerPort: 1235
+
+        livenessProbe:
+          exec:
+            command: ["curl","-s","http://localhost:1235/actuator/health/liveness"]
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        readinessProbe:
+          exec:
+            command: ["curl","-s","http://localhost:1235/actuator/health/readiness"]
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: 512m
+            memory: 1Gi
+
+        volumeMounts:
+        - name: cluster-worker-data
+          mountPath: /tmp/dolphinscheduler
+        - name: cluster-worker-logs
+          mountPath: /opt/dolphinscheduler/logs
+        - name: spark-code-sync
+          mountPath: /opt/spark-app
+        - name: config-volume
+          mountPath: /opt/dolphinscheduler/conf/common.properties
+          subPath: common.properties
+
+      volumes:
+      - name: spark-code-sync
+        persistentVolumeClaim:
+          claimName: spark-code-sync-pvc
+      - name: cluster-worker-data
+        persistentVolumeClaim:
+          claimName: cluster-worker-data
+      - name: cluster-worker-logs
+        emptyDir: {}
+      - name: config-volume
+        configMap:
+          name: cluster-configs
+
+  volumeClaimTemplates:
+  - metadata:
+      name: cluster-worker-data
+      labels:
+        app.kubernetes.io/instance: cluster
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cluster-worker-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: longhorn
+      resources:
+        requests:
+          storage: 2Gi
+      volumeMode: Filesystem

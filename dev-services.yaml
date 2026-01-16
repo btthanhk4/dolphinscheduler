@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-api
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-api
+spec:
+  type: NodePort
+  ports:
+    - name: api-port
+      port: 12345
+      targetPort: api-port
+      nodePort: 31536
+      protocol: TCP
+    - name: python-api-port
+      port: 25333
+      targetPort: python-api-port
+      nodePort: 30929
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/name: cluster-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-alert
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: alert
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-alert
+spec:
+  type: ClusterIP
+  ports:
+    - name: alert-port
+      port: 50052
+      targetPort: alert-port
+      protocol: TCP
+    - name: actuator-port
+      port: 50053
+      targetPort: actuator-port
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: alert
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/name: cluster-alert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-master-headless
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: master
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-master
+spec:
+  clusterIP: None
+  ports:
+    - name: master-port
+      port: 5678
+      targetPort: master-port
+      protocol: TCP
+    - name: actuator-port
+      port: 5679
+      targetPort: actuator-port
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: master
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/name: cluster-master
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-worker-headless
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-worker
+spec:
+  clusterIP: None
+  ports:
+    - name: worker-port
+      port: 1234
+      targetPort: worker-port
+      protocol: TCP
+    - name: actuator-port
+      port: 1235
+      targetPort: actuator-port
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/name: cluster-worker
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-zookeeper
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: zookeeper
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: zookeeper
+spec:
+  type: ClusterIP
+  ports:
+    - name: client
+      port: 2181
+      targetPort: client
+      protocol: TCP
+    - name: follower
+      port: 2888
+      targetPort: follower
+      protocol: TCP
+    - name: election
+      port: 3888
+      targetPort: election
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: zookeeper
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/name: zookeeper
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-zookeeper-headless
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: zookeeper
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: zookeeper
+spec:
+  clusterIP: None
+  ports:
+    - name: client
+      port: 2181
+      targetPort: client
+      protocol: TCP
+    - name: follower
+      port: 2888
+      targetPort: follower
+      protocol: TCP
+    - name: election
+      port: 3888
+      targetPort: election
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: zookeeper
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/name: zookeeper
+

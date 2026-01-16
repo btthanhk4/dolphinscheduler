@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-api
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: cluster
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: cluster-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: api
+        app.kubernetes.io/instance: cluster
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cluster-api
+    spec:
+      serviceAccountName: cluster
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: cluster-api
+          image: apache/dolphinscheduler-api:latest
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: TZ
+              value: Asia/Ho_Chi_Minh
+            - name: SPRING_JACKSON_TIME_ZONE
+              value: Asia/Ho_Chi_Minh
+            - name: DATABASE
+              value: postgresql
+
+            # ===== DATABASE (UAT) =====
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://cluster-postgresql-primary.bnctl-postgres-uat-ns.svc.cluster.local:5432/dolphin_db?characterEncoding=utf8
+            - name: SPRING_DATASOURCE_USERNAME
+              value: dolphin_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-externaldb
+                  key: database-password
+            - name: SPRING_DATASOURCE_DRIVER-CLASS-NAME
+              value: org.postgresql.Driver
+
+            # ===== REGISTRY =====
+            - name: REGISTRY_TYPE
+              value: zookeeper
+            - name: REGISTRY_ZOOKEEPER_CONNECT_STRING
+              value: cluster-zookeeper:2181
+
+            # ===== SECURITY (GIỮ THEO DEV) =====
+            - name: SECURITY_AUTHENTICATION_TYPE
+              value: PASSWORD
+
+            # ===== JVM (UAT) =====
+            - name: JAVA_OPTS
+              value: -Xms512m -Xmx512m -Xmn256m
+
+          envFrom:
+            - configMapRef:
+                name: cluster-common
+
+          ports:
+            - name: api-port
+              containerPort: 12345
+            - name: python-api-port
+              containerPort: 25333
+
+          livenessProbe:
+            exec:
+              command: ["curl","-s","http://localhost:12345/dolphinscheduler/actuator/health/liveness"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command: ["curl","-s","http://localhost:12345/dolphinscheduler/actuator/health/readiness"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+
+          volumeMounts:
+            - name: cluster-api-resources
+              mountPath: /opt/dolphinscheduler/resources
+            - name: cluster-api
+              mountPath: /opt/dolphinscheduler/logs
+            - name: config-volume
+              mountPath: /opt/dolphinscheduler/api-server/conf/common.properties
+              subPath: common.properties
+
+      volumes:
+        - name: cluster-api-resources
+          emptyDir: {}
+        - name: cluster-api
+          emptyDir: {}
+        - name: config-volume
+          configMap:
+            name: cluster-configs

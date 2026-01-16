@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cluster-master
+  namespace: bnctl-dolphinscheduler-uat-ns
+  labels:
+    app.kubernetes.io/component: master
+    app.kubernetes.io/instance: cluster
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cluster-master
+spec:
+  serviceName: cluster-master-headless
+  replicas: 2
+  podManagementPolicy: Parallel
+  revisionHistoryLimit: 10
+
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: master
+      app.kubernetes.io/instance: cluster
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: cluster-master
+
+  updateStrategy:
+    type: RollingUpdate
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: master
+        app.kubernetes.io/instance: cluster
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: cluster-master
+    spec:
+      serviceAccountName: cluster
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: cluster-master
+          image: apache/dolphinscheduler-master:latest
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: TZ
+              value: Asia/Ho_Chi_Minh
+            - name: SPRING_JACKSON_TIME_ZONE
+              value: Asia/Ho_Chi_Minh
+            - name: DATABASE
+              value: postgresql
+
+            # ===== DATABASE (UAT) =====
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://cluster-postgresql-primary.bnctl-postgres-uat-ns.svc.cluster.local:5432/dolphin_db?characterEncoding=utf8
+            - name: SPRING_DATASOURCE_USERNAME
+              value: dolphin_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cluster-externaldb
+                  key: database-password
+            - name: SPRING_DATASOURCE_DRIVER-CLASS-NAME
+              value: org.postgresql.Driver
+
+            # ===== REGISTRY =====
+            - name: REGISTRY_TYPE
+              value: zookeeper
+            - name: REGISTRY_ZOOKEEPER_CONNECT_STRING
+              value: cluster-zookeeper:2181
+
+            # ===== JVM (GIỮ THEO DEV) =====
+            - name: JAVA_OPTS
+              value: -Xms1g -Xmx1g -Xmn512m
+
+            # ===== MASTER CONFIG (GIỮ THEO DEV) =====
+            - name: MASTER_DISPATCH_TASK_NUM
+              value: "3"
+            - name: MASTER_EXEC_TASK_NUM
+              value: "20"
+            - name: MASTER_EXEC_THREADS
+              value: "100"
+            - name: MASTER_FAILOVER_INTERVAL
+              value: 10m
+            - name: MASTER_HEARTBEAT_ERROR_THRESHOLD
+              value: "5"
+            - name: MASTER_HOST_SELECTOR
+              value: LowerWeight
+            - name: MASTER_KILL_APPLICATION_WHEN_HANDLE_FAILOVER
+              value: "true"
+            - name: MASTER_MAX_HEARTBEAT_INTERVAL
+              value: 10s
+            - name: MASTER_SERVER_LOAD_PROTECTION_ENABLED
+              value: "false"
+            - name: MASTER_SERVER_LOAD_PROTECTION_MAX_DISK_USAGE_PERCENTAGE_THRESHOLDS
+              value: "0.7"
+            - name: MASTER_SERVER_LOAD_PROTECTION_MAX_JVM_CPU_USAGE_PERCENTAGE_THRESHOLDS
+              value: "0.7"
+            - name: MASTER_SERVER_LOAD_PROTECTION_MAX_SYSTEM_CPU_USAGE_PERCENTAGE_THRESHOLDS
+              value: "0.7"
+            - name: MASTER_SERVER_LOAD_PROTECTION_MAX_SYSTEM_MEMORY_USAGE_PERCENTAGE_THRESHOLDS
+              value: "0.7"
+            - name: MASTER_STATE_WHEEL_INTERVAL
+              value: 5s
+            - name: MASTER_TASK_COMMIT_INTERVAL
+              value: 1s
+            - name: MASTER_TASK_COMMIT_RETRYTIMES
+              value: "5"
+
+          envFrom:
+            - configMapRef:
+                name: cluster-common
+
+          ports:
+            - name: master-port
+              containerPort: 5678
+            - name: actuator-port
+              containerPort: 5679
+
+          livenessProbe:
+            exec:
+              command: ["curl","-s","http://localhost:5679/actuator/health/liveness"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command: ["curl","-s","http://localhost:5679/actuator/health/readiness"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 512m
+              memory: 1Gi
+
+          volumeMounts:
+            - name: cluster-master
+              mountPath: /opt/dolphinscheduler/logs
+            - name: config-volume
+              mountPath: /opt/dolphinscheduler/conf/common.properties
+              subPath: common.properties
+
+      volumes:
+        - name: config-volume
+          configMap:
+            name: cluster-configs
+
+  volumeClaimTemplates:
+    - metadata:
+        name: cluster-master
+        labels:
+          app.kubernetes.io/instance: cluster
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: cluster-master
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 2Gi
+        volumeMode: Filesystem
