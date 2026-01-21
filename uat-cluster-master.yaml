@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: cluster-master
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/component: master
     app.kubernetes.io/instance: cluster

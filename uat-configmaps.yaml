@@ -2,16 +2,16 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cluster-common
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/instance: cluster
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: cluster-common
 data:
-  AWS-S3-ACCESS-KEY-ID: minioadmin
-  AWS-S3-ACCESS-KEY-SECRET: minioadmin
+  AWS-S3-ACCESS-KEY-ID: admin
+  AWS-S3-ACCESS-KEY-SECRET: S3cr3tP@ssw0rd!
   AWS_S3_BUCKET_NAME: dolphinscheduler
-  AWS_S3_ENDPOINT: http://192.168.45.207:9000
+  AWS_S3_ENDPOINT: http://192.168.45.216:9000
   AWS_S3_PATH_STYLE_ACCESS: "true"
   DATA_BASEDIR_PATH: /tmp/dolphinscheduler
   DATAX_LAUNCHER: /opt/soft/datax/bin/datax.py
@@ -30,16 +30,16 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cluster-configs
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/instance: cluster
     app.kubernetes.io/managed-by: Helm
 data:
   aws.credentials.provider.type: AWSStaticCredentialsProvider
-  aws.s3.access.key.id: minioadmin
-  aws.s3.access.key.secret: minio-secret-key-uat
+  aws.s3.access.key.id: admin
+  aws.s3.access.key.secret: S3cr3tP@ssw0rd!
   aws.s3.bucket.name: dolphinscheduler
-  aws.s3.endpoint: http://192.168.45.207:9000
+  aws.s3.endpoint: http://192.168.45.216:9000
   aws.s3.region: us-east-1
   common.properties: |
     resource.storage.type=S3
@@ -57,7 +57,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cluster-zookeeper-scripts
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/component: zookeeper
     app.kubernetes.io/instance: cluster

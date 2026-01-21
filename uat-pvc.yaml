@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: cluster-alert
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/component: alert
     app.kubernetes.io/instance: cluster
@@ -21,7 +21,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: spark-code-sync-pvc
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
 spec:
   accessModes:
     - ReadWriteMany

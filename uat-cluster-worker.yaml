@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: cluster-worker
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/component: worker
     app.kubernetes.io/instance: cluster
@@ -46,7 +46,7 @@ spec:
 
       containers:
       - name: cluster-worker
-        image: btthanhk4/dolphin-worker-custom:v2
+        image: btthanhk4/dolphinscheduler-worker:1.0.1
         imagePullPolicy: IfNotPresent
 
         env:

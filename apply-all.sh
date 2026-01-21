@@ -36,5 +36,5 @@ echo "11. Applying alert..."
 kubectl apply -f uat-cluster-alert.yaml
 
 echo "Done! Checking pod status..."
-kubectl get pods -n bnctl-dolphinscheduler-uat-ns
+kubectl get pods -n bnctl-dolphinscheduler-prod-ns
 

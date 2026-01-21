@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: cluster-zookeeper
-  namespace: bnctl-dolphinscheduler-uat-ns
+  namespace: bnctl-dolphinscheduler-prod-ns
   labels:
     app.kubernetes.io/component: zookeeper
     app.kubernetes.io/instance: cluster
@@ -95,7 +95,7 @@ spec:
         - name: ZOO_MAX_SESSION_TIMEOUT
           value: "40000"
         - name: ZOO_SERVERS
-          value: cluster-zookeeper-0.cluster-zookeeper-headless.bnctl-dolphinscheduler-uat-ns.svc.cluster.local:2888:3888::1
+          value: cluster-zookeeper-0.cluster-zookeeper-headless.bnctl-dolphinscheduler-prod-ns.svc.cluster.local:2888:3888::1
         - name: ZOO_ENABLE_AUTH
           value: "no"
         - name: ZOO_ENABLE_QUORUM_AUTH
